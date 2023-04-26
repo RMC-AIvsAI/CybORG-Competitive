@@ -22,17 +22,17 @@ mixer = 0.9 # for training opponent best-response, how many games with current a
 
 red_batch_size = 61440
 red_minibatch_size = 3840
-red_lr = 1e-3
+red_lr = 5e-4
 red_entropy = 1e-3
 red_kl = 1
-red_clip_param = 0.5
+red_clip_param = 0.3
 
 blue_batch_size = 61440
 blue_minibatch_size = 3840
-blue_lr = 1e-3
+blue_lr = 5e-4
 blue_entropy = 1e-3
 blue_kl = 1
-blue_clip_param = 0.5
+blue_clip_param = 0.3
 
 layer_units = 256
 model_arch = [layer_units, layer_units]
