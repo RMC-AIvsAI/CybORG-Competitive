@@ -5,3 +5,14 @@ numpy
 gym
 prettytable
 docutils
+ray
+ray[train]
+ray[rllib]
+gymnasium
+dm-tree
+pyarrow
+seaborn
+torch
+pandas
+protobuf<3.20
+tensorflow
