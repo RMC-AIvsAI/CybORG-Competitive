@@ -1,13 +1,11 @@
 pytest
 paramiko
 pyyaml
-numpy
+numpy==1.23.5
 gym
 prettytable
 docutils
-ray
-ray[train]
-ray[rllib]
+ray[rllib]==2.0.1
 gymnasium
 dm-tree
 pyarrow
