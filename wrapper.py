@@ -716,5 +716,4 @@ class CompetitiveWrapper(BaseWrapper):
     def get_rewards(self):
         return self.get_attr("get_rewards")()
 
-    def get_meander_action():
 
