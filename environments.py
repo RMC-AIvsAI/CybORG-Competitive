@@ -9,7 +9,8 @@ from ray.tune.registry import register_env
 
 import numpy as np
 from itertools import product
-from random import randint, random
+from random import randint
+import random
 from scipy.special import softmax
 from statistics import mean
 
@@ -709,7 +710,7 @@ def build_red_agent(opponent=False, dedicated=False, workers=40, fresh=True):
     return red_agent
 
 
-def get_meander_action(action_space, observation, scanned_subnets,
+def get_meander_action(cyborg, action_space, observation, scanned_subnets,
                        scanned_ips, exploited_ips, escalated_hosts, host_ip_map, last_host, last_ip):
     if last_ip is not None:
         if observation['success']:
@@ -730,30 +731,32 @@ def get_meander_action(action_space, observation, scanned_subnets,
     # Always impact if able
     if 'Op_Server0' in escalated_hosts:
         last_host = 'Op_Server0'
-        return red_action_list[
-            'Impact'], scanned_subnets, scanned_ips, exploited_ips, escalated_hosts, host_ip_map, last_host, last_ip
+        return (red_action_list.index(['Impact']),
+                scanned_subnets, scanned_ips, exploited_ips, escalated_hosts, host_ip_map, last_host, last_ip)
 
     # start by scanning
     for subnet in action_space["subnet"]:
         if not action_space["subnet"][subnet] or subnet in scanned_subnets:
             continue
         scanned_subnets.append(subnet)
-        return red_action_list.index(('DiscoverSystems',
-                                      subnet)), scanned_subnets, scanned_ips, exploited_ips, escalated_hosts, host_ip_map, last_host, last_ip
+        named_subnet = list(cyborg.subnet_map.keys())[list(cyborg.subnet_map.values()).index(subnet)]
+        return (red_action_list.index(('DiscoverSystems', named_subnet)),
+                scanned_subnets, scanned_ips, exploited_ips, escalated_hosts, host_ip_map, last_host, last_ip)
     # discover network services
     # # act on ip addresses discovered in first subnet
-    addresses = [i for i in action_space["ip_address"]]
+    # excluding Defender and User 0 https://github.com/RMC-AIvsAI/CybORG-Competitive/blob/main/wrapper.py#L139C4-L140
+    addresses = [address for i, address in enumerate(action_space['ip_address']) if i not in {0, 3}]
     random.shuffle(addresses)
     for address in addresses:
         if not action_space["ip_address"][address] or address in scanned_ips:
             continue
         scanned_ips.append(address)
-
-        return red_action_list.index(('DiscoverServices',
-                                      address)), scanned_subnets, scanned_ips, exploited_ips, escalated_hosts, host_ip_map, last_host, last_ip
+        named_address = list(cyborg.ip_map.keys())[list(cyborg.ip_map.values()).index(address)]
+        return (red_action_list.index(('DiscoverServices', named_address)),
+                scanned_subnets, scanned_ips, exploited_ips, escalated_hosts, host_ip_map, last_host, last_ip)
 
     # priv esc on owned hosts
-    hostnames = [x for x in action_space['hostname'].keys()]
+    hostnames = [hostname for x, hostname in enumerate(action_space['hostname'].keys()) if x not in {0, 3}]
     random.shuffle(hostnames)
     for hostname in hostnames:
         # test if host is not known
@@ -767,8 +770,8 @@ def get_meander_action(action_space, observation, scanned_subnets,
             continue
         escalated_hosts.append(hostname)
         last_host = hostname
-        return red_action_list.index(('PrivilegeEscalate',
-                                      hostname)), scanned_subnets, scanned_ips, exploited_ips, escalated_hosts, host_ip_map, last_host, last_ip
+        return (red_action_list.index(('PrivilegeEscalate', hostname)),
+                scanned_subnets, scanned_ips, exploited_ips, escalated_hosts, host_ip_map, last_host, last_ip)
 
     # access unexploited hosts
     for address in addresses:
@@ -777,11 +780,12 @@ def get_meander_action(action_space, observation, scanned_subnets,
             continue
         exploited_ips.append(address)
         last_ip = address
-        return red_action_list.index(('ExploitRemoteService',
-                                      address)), scanned_subnets, scanned_ips, exploited_ips, escalated_hosts, host_ip_map, last_host, last_ip
+        named_address = list(cyborg.ip_map.keys())[list(cyborg.ip_map.values()).index(address)]
+        return (red_action_list.index(('ExploitServices', named_address)),
+                scanned_subnets, scanned_ips, exploited_ips, escalated_hosts, host_ip_map, last_host, last_ip)
 
-    raise NotImplementedError('Red Meander has run out of options!')
-
+    last_host = 'Op_Server0'
+    return red_action_list.index(['Impact']), scanned_subnets, scanned_ips, exploited_ips, escalated_hosts, host_ip_map, last_host, last_ip
 
 def sample(test_red, test_blue, games=1, verbose=False, show_policy=False, blue_moves=None, red_moves=None,
            random_blue=False, random_red=False, meander_red=False):
@@ -801,9 +805,6 @@ def sample(test_red, test_blue, games=1, verbose=False, show_policy=False, blue_
     host_ip_map = {}
     last_host = None
     last_ip = None
-
-    print(cyborg.get_ip_map())
-    print(cyborg.red_info)
 
     for g in range(games):
 
@@ -833,9 +834,11 @@ def sample(test_red, test_blue, games=1, verbose=False, show_policy=False, blue_
 
             if meander_red:
                 red_action, scanned_subnets, scanned_ips, exploited_ips, escalated_hosts, host_ip_map, last_host, last_ip = get_meander_action(
+                    cyborg,
                     cyborg.get_action_space(agent="Red"),
                     cyborg.get_observation(agent="Red"), scanned_subnets,
                     scanned_ips, exploited_ips, escalated_hosts, host_ip_map, last_host, last_ip)
+                red_extras = {'action_dist_inputs': np.zeros(len(red_action_list)), 'action_prob': 1}
             elif red_moves is None:
                 red_action, _, red_extras = test_red.compute_single_action(red_obs, full_fetch=True)
             else:
