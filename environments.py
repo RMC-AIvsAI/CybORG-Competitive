@@ -13,12 +13,12 @@ from random import randint, random
 from scipy.special import softmax
 from statistics import mean
 
-timesteps = 12 # per game
+timesteps = 12  # per game
 
 gae = 1
 gamma = 0.99
 epochs = 30
-mixer = 0.9 # for training opponent best-response, how many games with current agent policy instead of agent pool
+mixer = 0.9  # for training opponent best-response, how many games with current agent policy instead of agent pool
 
 red_batch_size = 61440
 red_minibatch_size = 3840
@@ -67,12 +67,13 @@ blue_action_list = blue_lone_actions + list(
     product(blue_host_actions, hostnames)
 )
 red_action_list = (
-    red_lone_actions
-    + list(product(red_network_actions, subnets))
-    + list(product(red_host_actions, hostnames))
+        red_lone_actions
+        + list(product(red_network_actions, subnets))
+        + list(product(red_host_actions, hostnames))
 )
-blue_obs_space = 5*len(hostnames) + timesteps + 1
+blue_obs_space = 5 * len(hostnames) + timesteps + 1
 red_obs_space = 29 + timesteps + 1
+
 
 class BlueTrainer(gym.Env):
     def __init__(self, env_config):
@@ -102,7 +103,7 @@ class BlueTrainer(gym.Env):
         config['log_sys_usage'] = False
         self.red_opponent = PPO(config=config)
         self.opponent_id = 0
-        
+
     def reset(self):
 
         pool_file = open("./policies/red_opponent_pool/pool_size", "r")
@@ -113,15 +114,15 @@ class BlueTrainer(gym.Env):
             self.opponent_id = randint(1, red_pool_size)
         else:
             self.opponent_id = 0
-        
+
         path_file = open(f"./policies/red_opponent_pool/opponent_red_{self.opponent_id}/checkpoint_path", "r")
         checkpoint_path = path_file.read()
         path_file.close()
         self.red_opponent.restore(checkpoint_path)
-    
-        obs, self.red_obs = self.cyborg.reset()    
+
+        obs, self.red_obs = self.cyborg.reset()
         return obs
-    
+
     # the step function should receive a blue action
     # the red action will be chosen within the step function
     def step(self, action, verbose=False):
@@ -148,15 +149,15 @@ class BlueTrainer(gym.Env):
             print(self.cyborg._create_red_table())
             print(self.red_obs)
             print(f'Known Subnets: {self.cyborg.known_subnets}')
-                    
+
         # episode is done if last timestep has been reached
         done = False
         info = {}
         if self.cyborg.turn == self.cyborg.turns_per_game:
-            done = True  
+            done = True
 
         return (obs, reward, done, info)
-    
+
 
 class BlueOpponent(gym.Env):
     def __init__(self, env_config):
@@ -186,7 +187,7 @@ class BlueOpponent(gym.Env):
         config['log_sys_usage'] = False
         self.red_opponent = PPO(config=config)
         self.opponent_id = 0
-        
+
     def reset(self):
 
         pool_file = open("./policies/red_competitive_pool/pool_size", "r")
@@ -194,18 +195,18 @@ class BlueOpponent(gym.Env):
         pool_file.close()
 
         if ((red_pool_size > 1) and (random() > mixer)):
-            self.opponent_id = randint(1, red_pool_size-1)
+            self.opponent_id = randint(1, red_pool_size - 1)
         else:
             self.opponent_id = red_pool_size
-        
+
         path_file = open(f"./policies/red_competitive_pool/competitive_red_{self.opponent_id}/checkpoint_path", "r")
         checkpoint_path = path_file.read()
         path_file.close()
         self.red_opponent.restore(checkpoint_path)
-    
-        obs, self.red_obs = self.cyborg.reset()    
+
+        obs, self.red_obs = self.cyborg.reset()
         return obs
-    
+
     # the step function should receive a blue action
     # the red action will be chosen within the step function
     def step(self, action, verbose=False):
@@ -232,12 +233,12 @@ class BlueOpponent(gym.Env):
             print(self.cyborg._create_red_table())
             print(self.red_obs)
             print(f'Known Subnets: {self.cyborg.known_subnets}')
-                    
+
         # episode is done if last timestep has been reached
         done = False
         info = {}
         if self.cyborg.turn == self.cyborg.turns_per_game:
-            done = True  
+            done = True
 
         return (obs, reward, done, info)
 
@@ -269,17 +270,17 @@ class DedicatedBlueEnv(gym.Env):
         config['vf_share_layers'] = False
         config['log_sys_usage'] = False
         self.red_opponent = PPO(config=config)
-        
+
     def reset(self):
 
         path_file = open(f"./policies/competitive_red_policy", "r")
         checkpoint_path = path_file.read()
         path_file.close()
         self.red_opponent.restore(checkpoint_path)
-    
-        obs, self.red_obs = self.cyborg.reset()    
+
+        obs, self.red_obs = self.cyborg.reset()
         return obs
-    
+
     # the step function should receive a blue action
     # the red action will be chosen within the step function
     def step(self, action, verbose=False):
@@ -306,16 +307,17 @@ class DedicatedBlueEnv(gym.Env):
             print(self.cyborg._create_red_table())
             print(self.red_obs)
             print(f'Known Subnets: {self.cyborg.known_subnets}')
-                    
+
         # episode is done if last timestep has been reached
         done = False
         if self.cyborg.turn == self.cyborg.turns_per_game:
             done = True
-        
+
         info = {}
 
         return (obs, reward, done, info)
-    
+
+
 class RedTrainer(gym.Env):
     def __init__(self, env_config):
         self.name = "red_env"
@@ -353,13 +355,13 @@ class RedTrainer(gym.Env):
             self.opponent_id = randint(1, blue_pool_size)
         else:
             self.opponent_id = blue_pool_size
-        
+
         path_file = open(f"./policies/blue_opponent_pool/opponent_blue_{self.opponent_id}/checkpoint_path", "r")
         checkpoint_path = path_file.read()
         path_file.close()
         self.blue_opponent.restore(checkpoint_path)
-    
-        self.blue_obs, obs = self.cyborg.reset()   
+
+        self.blue_obs, obs = self.cyborg.reset()
         return obs
 
     # the step function should receive a red action
@@ -376,14 +378,14 @@ class RedTrainer(gym.Env):
 
         # red reward and new observation
         obs = state.red_observation
-        reward = -state.reward # reward signal is flipped here for the red agent
+        reward = -state.reward  # reward signal is flipped here for the red agent
         self.blue_obs = state.blue_observation
-  
+
         # episode is done if last timestep has been reached
         done = False
         if self.cyborg.turn == self.cyborg.turns_per_game:
             done = True
-        
+
         info = {}
 
         return (obs, reward, done, info)
@@ -423,16 +425,16 @@ class RedOpponent(gym.Env):
         pool_file.close()
 
         if ((blue_pool_size > 1) and (random() > mixer)):
-            self.opponent_id = randint(1, blue_pool_size-1)
+            self.opponent_id = randint(1, blue_pool_size - 1)
         else:
             self.opponent_id = blue_pool_size
-        
+
         path_file = open(f"./policies/blue_competitive_pool/competitive_blue_{self.opponent_id}/checkpoint_path", "r")
         checkpoint_path = path_file.read()
         path_file.close()
         self.blue_opponent.restore(checkpoint_path)
-    
-        self.blue_obs, obs = self.cyborg.reset()   
+
+        self.blue_obs, obs = self.cyborg.reset()
         return obs
 
     # the step function should receive a red action
@@ -449,14 +451,14 @@ class RedOpponent(gym.Env):
 
         # red reward and new observation
         obs = state.red_observation
-        reward = -state.reward # reward signal is flipped here for the red agent
+        reward = -state.reward  # reward signal is flipped here for the red agent
         self.blue_obs = state.blue_observation
-  
+
         # episode is done if last timestep has been reached
         done = False
         if self.cyborg.turn == self.cyborg.turns_per_game:
             done = True
-        
+
         info = {}
 
         return (obs, reward, done, info)
@@ -489,19 +491,17 @@ class DedicatedRedEnv(gym.Env):
         self.blue_opponent = PPO(config=config)
 
     def reset(self):
-
         path_file = open(f"./policies/competitive_blue_policy", "r")
         checkpoint_path = path_file.read()
         path_file.close()
         self.blue_opponent.restore(checkpoint_path)
 
-        self.blue_obs, obs = self.cyborg.reset()   
+        self.blue_obs, obs = self.cyborg.reset()
         return obs
 
     # the step function should receive a red action
     # the blue action will be chosen within the step function
     def step(self, action, verbose=False):
-
         blue_action = self.blue_opponent.compute_single_action(self.blue_obs)
 
         # advance to the new state
@@ -512,17 +512,17 @@ class DedicatedRedEnv(gym.Env):
 
         # red reward and new observation
         obs = state.red_observation
-        reward = -state.reward # reward signal is flipped here for the red agent
+        reward = -state.reward  # reward signal is flipped here for the red agent
         self.blue_obs = state.blue_observation
-  
+
         # episode is done if last timestep has been reached
         done = False
         if self.cyborg.turn == self.cyborg.turns_per_game:
             done = True
-        
+
         info = {}
 
-        return (obs, reward, done, info)
+        return obs, reward, done, info
 
 
 def build_blue_agent(opponent=False, dedicated=False, workers=40, fresh=True):
@@ -559,10 +559,10 @@ def build_blue_agent(opponent=False, dedicated=False, workers=40, fresh=True):
         "num_workers": workers,
         "train_batch_size": blue_batch_size,
         "sgd_minibatch_size": blue_minibatch_size,
-        'rollout_fragment_length': int(blue_batch_size/workers),
+        'rollout_fragment_length': int(blue_batch_size / workers),
         'num_sgd_iter': epochs,
         'batch_mode': "truncate_episodes",
-        "model": {"fcnet_hiddens": model_arch, "fcnet_activation": act_func, "vf_share_layers":False},
+        "model": {"fcnet_hiddens": model_arch, "fcnet_activation": act_func, "vf_share_layers": False},
         "lr": blue_lr,
         "entropy_coeff": blue_entropy,
         "observation_space": MultiBinary(blue_obs_space),
@@ -613,8 +613,9 @@ def build_blue_agent(opponent=False, dedicated=False, workers=40, fresh=True):
             path_file.close()
             path_file = open("./policies/blue_competitive_pool/pool_size", "w")
             path_file.write("0")
-            path_file.close() 
+            path_file.close()
     return blue_agent
+
 
 def build_red_agent(opponent=False, dedicated=False, workers=40, fresh=True):
     # register the custom environment
@@ -646,14 +647,14 @@ def build_red_agent(opponent=False, dedicated=False, workers=40, fresh=True):
     # set the RLLib configuration
     red_config = {
         "env": "RedTrainer",
-        "num_gpus":  1,
+        "num_gpus": 1,
         "num_workers": workers,
         "train_batch_size": red_batch_size,
         "sgd_minibatch_size": red_minibatch_size,
-        'rollout_fragment_length': int(red_batch_size/workers),
+        'rollout_fragment_length': int(red_batch_size / workers),
         'num_sgd_iter': epochs,
         'batch_mode': "truncate_episodes",
-        "model": {"fcnet_hiddens": model_arch, "fcnet_activation": act_func, "vf_share_layers":False},
+        "model": {"fcnet_hiddens": model_arch, "fcnet_activation": act_func, "vf_share_layers": False},
         "lr": red_lr,
         "entropy_coeff": red_entropy,
         "observation_space": MultiBinary(red_obs_space),
@@ -704,10 +705,86 @@ def build_red_agent(opponent=False, dedicated=False, workers=40, fresh=True):
             print(checkpoint_path)
             path_file = open("./policies/red_competitive_pool/pool_size", "w")
             path_file.write("0")
-            path_file.close()     
+            path_file.close()
     return red_agent
 
-def sample(test_red, test_blue, games=1, verbose=False, show_policy=False, blue_moves=None, red_moves=None, random_blue=False, random_red=False):
+
+def get_meander_action(action_space, observation, scanned_subnets,
+                       scanned_ips, exploited_ips, escalated_hosts, host_ip_map, last_host, last_ip):
+    if last_ip is not None:
+        if observation['success']:
+            host_ip_map[[value['System info']['Hostname'] for key, value in observation.items()
+                         if key != 'success' and 'System info' in value
+                         and 'Hostname' in value['System info']][0]] = last_ip
+        else:
+            escalated_hosts = []
+        last_ip = None
+    if last_host is not None:
+        if not observation['success']:
+            if last_host in escalated_hosts:
+                escalated_hosts.remove(last_host)
+            if last_host in host_ip_map and host_ip_map[last_host] in exploited_ips:
+                exploited_ips.remove(host_ip_map[last_host])
+        last_host = None
+
+    # Always impact if able
+    if 'Op_Server0' in escalated_hosts:
+        last_host = 'Op_Server0'
+        return red_action_list[
+            'Impact'], scanned_subnets, scanned_ips, exploited_ips, escalated_hosts, host_ip_map, last_host, last_ip
+
+    # start by scanning
+    for subnet in action_space["subnet"]:
+        if not action_space["subnet"][subnet] or subnet in scanned_subnets:
+            continue
+        scanned_subnets.append(subnet)
+        return red_action_list.index(('DiscoverSystems',
+                                      subnet)), scanned_subnets, scanned_ips, exploited_ips, escalated_hosts, host_ip_map, last_host, last_ip
+    # discover network services
+    # # act on ip addresses discovered in first subnet
+    addresses = [i for i in action_space["ip_address"]]
+    random.shuffle(addresses)
+    for address in addresses:
+        if not action_space["ip_address"][address] or address in scanned_ips:
+            continue
+        scanned_ips.append(address)
+
+        return red_action_list.index(('DiscoverServices',
+                                      address)), scanned_subnets, scanned_ips, exploited_ips, escalated_hosts, host_ip_map, last_host, last_ip
+
+    # priv esc on owned hosts
+    hostnames = [x for x in action_space['hostname'].keys()]
+    random.shuffle(hostnames)
+    for hostname in hostnames:
+        # test if host is not known
+        if not action_space["hostname"][hostname]:
+            continue
+        # test if host is already priv esc
+        if hostname in escalated_hosts:
+            continue
+        # test if host is exploited
+        if hostname in host_ip_map and host_ip_map[hostname] not in exploited_ips:
+            continue
+        escalated_hosts.append(hostname)
+        last_host = hostname
+        return red_action_list.index(('PrivilegeEscalate',
+                                      hostname)), scanned_subnets, scanned_ips, exploited_ips, escalated_hosts, host_ip_map, last_host, last_ip
+
+    # access unexploited hosts
+    for address in addresses:
+        # test if output of observation matches expected output
+        if not action_space["ip_address"][address] or address in exploited_ips:
+            continue
+        exploited_ips.append(address)
+        last_ip = address
+        return red_action_list.index(('ExploitRemoteService',
+                                      address)), scanned_subnets, scanned_ips, exploited_ips, escalated_hosts, host_ip_map, last_host, last_ip
+
+    raise NotImplementedError('Red Meander has run out of options!')
+
+
+def sample(test_red, test_blue, games=1, verbose=False, show_policy=False, blue_moves=None, red_moves=None,
+           random_blue=False, random_red=False, meander_red=False):
     base_cyborg = CybORG(scenario_file="./scenario.yaml", environment="sim", agents=None)
     # wrapper to accept red and blue actions, and return  observations
     cyborg = CompetitiveWrapper(env=base_cyborg, turns=timesteps, output_mode="vector")
@@ -716,23 +793,35 @@ def sample(test_red, test_blue, games=1, verbose=False, show_policy=False, blue_
     max_score = 0
     min_score = float('inf')
 
+    # Meander-related
+    scanned_subnets = []
+    scanned_ips = []
+    exploited_ips = []
+    escalated_hosts = []
+    host_ip_map = {}
+    last_host = None
+    last_ip = None
+
+    print(cyborg.get_ip_map())
+    print(cyborg.red_info)
+
     for g in range(games):
 
         blue_obs, red_obs = cyborg.reset()
         score = 0
 
-        if verbose and (games>1):
-            print(f"-------- Game {g+1} --------")
-        
+        if verbose and (games > 1):
+            print(f"-------- Game {g + 1} --------")
+
         if random_blue:
             blue_moves = []
             for t in range(timesteps):
-                blue_moves.append(randint(1, len(blue_action_list)-1))
-        
+                blue_moves.append(randint(1, len(blue_action_list) - 1))
+
         if random_red:
             red_moves = []
             for t in range(timesteps):
-                red_moves.append(randint(1, len(red_action_list)-1))
+                red_moves.append(randint(1, len(red_action_list) - 1))
 
         for t in range(timesteps):
 
@@ -740,13 +829,18 @@ def sample(test_red, test_blue, games=1, verbose=False, show_policy=False, blue_
                 blue_action, _, blue_extras = test_blue.compute_single_action(blue_obs, full_fetch=True)
             else:
                 blue_action = blue_moves[t]
-                blue_extras = {'action_dist_inputs':np.zeros(len(blue_action_list)), 'action_prob':1}
+                blue_extras = {'action_dist_inputs': np.zeros(len(blue_action_list)), 'action_prob': 1}
 
-            if red_moves is None:
+            if meander_red:
+                red_action, scanned_subnets, scanned_ips, exploited_ips, escalated_hosts, host_ip_map, last_host, last_ip = get_meander_action(
+                    cyborg.get_action_space(agent="Red"),
+                    cyborg.get_observation(agent="Red"), scanned_subnets,
+                    scanned_ips, exploited_ips, escalated_hosts, host_ip_map, last_host, last_ip)
+            elif red_moves is None:
                 red_action, _, red_extras = test_red.compute_single_action(red_obs, full_fetch=True)
             else:
                 red_action = red_moves[t]
-                red_extras = {'action_dist_inputs':np.zeros(len(red_action_list)), 'action_prob':1}
+                red_extras = {'action_dist_inputs': np.zeros(len(red_action_list)), 'action_prob': 1}
 
             state = cyborg.step(red_action, blue_action)
 
@@ -767,18 +861,20 @@ def sample(test_red, test_blue, games=1, verbose=False, show_policy=False, blue_
                 else:
                     red_policy = softmax(red_extras['action_dist_inputs'])
 
-                print(f'---- Turn {t+1} ----')
+                print(f'---- Turn {t + 1} ----')
                 if show_policy:
                     print("Blue policy: ")
                     for a in range(len(blue_action_list)):
-                        print(f"{blue_action_list[a]}: {blue_policy[a]*100:0.2f}%")
-                print(f"Blue selects {blue_action_list[blue_action]} with probability {blue_extras['action_prob']*100:0.2f}%")
+                        print(f"{blue_action_list[a]}: {blue_policy[a] * 100:0.2f}%")
+                print(
+                    f"Blue selects {blue_action_list[blue_action]} with probability {blue_extras['action_prob'] * 100:0.2f}%")
                 print()
                 if show_policy:
                     print(f"Red Policy: ")
                     for a in range(len(red_action_list)):
-                        print(f"{red_action_list[a]}: {red_policy[a]*100:0.2f}%")
-                print(f"Red selects {red_action_list[red_action]} with probability {red_extras['action_prob']*100:0.2f}%")
+                        print(f"{red_action_list[a]}: {red_policy[a] * 100:0.2f}%")
+                print(
+                    f"Red selects {red_action_list[red_action]} with probability {red_extras['action_prob'] * 100:0.2f}%")
                 print()
                 print(f'New Red observation: {red_obs}')
                 print(cyborg._create_red_table())
@@ -786,19 +882,17 @@ def sample(test_red, test_blue, games=1, verbose=False, show_policy=False, blue_
                 print(f"Reward: +{red_reward:0.1f}")
                 print(f"Score: {score:0.1f}")
                 print()
-        
+
         scores.append(score)
         if score > max_score:
             max_score = score
         if score < min_score:
             min_score = score
-    
+
     avg_score = mean(scores)
-    if verbose and (games>1):
+    if verbose and (games > 1):
         print(f'Average Score for {games} Games is {avg_score}')
         print(f'High Score is {max_score}')
         print(f'Low Score is {min_score}')
-    
-    return(avg_score)
 
-
+    return (avg_score)
