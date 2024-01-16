@@ -713,7 +713,7 @@ def build_red_agent(opponent=False, dedicated=False, workers=40, fresh=True):
 def get_meander_action(cyborg, action_space, observation, scanned_subnets,
                        scanned_ips, exploited_ips, escalated_hosts, host_ip_map, last_host, last_ip):
     if last_ip is not None:
-        if observation['success']:
+        if observation['success'] == True:
             host_ip_map[[value['System info']['Hostname'] for key, value in observation.items()
                          if key != 'success' and 'System info' in value
                          and 'Hostname' in value['System info']][0]] = last_ip
@@ -721,7 +721,7 @@ def get_meander_action(cyborg, action_space, observation, scanned_subnets,
             escalated_hosts = []
         last_ip = None
     if last_host is not None:
-        if not observation['success']:
+        if observation['success'] == False:
             if last_host in escalated_hosts:
                 escalated_hosts.remove(last_host)
             if last_host in host_ip_map and host_ip_map[last_host] in exploited_ips:
@@ -785,7 +785,9 @@ def get_meander_action(cyborg, action_space, observation, scanned_subnets,
                 scanned_subnets, scanned_ips, exploited_ips, escalated_hosts, host_ip_map, last_host, last_ip)
 
     last_host = 'Op_Server0'
-    return red_action_list.index(['Impact']), scanned_subnets, scanned_ips, exploited_ips, escalated_hosts, host_ip_map, last_host, last_ip
+    return red_action_list.index(
+        ['Impact']), scanned_subnets, scanned_ips, exploited_ips, escalated_hosts, host_ip_map, last_host, last_ip
+
 
 def sample(test_red, test_blue, games=1, verbose=False, show_policy=False, blue_moves=None, red_moves=None,
            random_blue=False, random_red=False, meander_red=False):
@@ -797,16 +799,16 @@ def sample(test_red, test_blue, games=1, verbose=False, show_policy=False, blue_
     max_score = 0
     min_score = float('inf')
 
-    # Meander-related
-    scanned_subnets = []
-    scanned_ips = []
-    exploited_ips = []
-    escalated_hosts = []
-    host_ip_map = {}
-    last_host = None
-    last_ip = None
-
     for g in range(games):
+
+        # Meander-related
+        scanned_subnets = []
+        scanned_ips = []
+        exploited_ips = []
+        escalated_hosts = []
+        host_ip_map = {}
+        last_host = None
+        last_ip = None
 
         blue_obs, red_obs = cyborg.reset()
         score = 0
